@@ -1,0 +1,48 @@
+#! /bin/sh
+# Combined gui/textmode diff for unison
+#
+# This script should have been saved
+# as "/usr/local/libexec/unison-diff".
+#
+# In order to make unison use this script, add a "diff" preference
+# to your unison preference setting like this:
+#
+# > diff = /usr/local/libexec/unison-diff
+#
+# Note: You have to remove the "# > "-prefix from the line
+# after copying the above line to your preference file!
+#
+# $HeadURL: /caches/xsvn/uxadm/trunk/usr/local/libexec/unison-diff $
+# $Author: root $
+# $Date: 2007-09-24T19:41:43.514908Z $
+# $Revision: 1013 $
+#
+# Written in 2007 by Guenther Brunthaler
+
+
+. /etc/importer_jh7tgj4vn9zxp88l71gv42837.sh \
+	x11_04iktrikbitbqwkgkg4ehlfag \
+	diff_files_654jerb60jqt2i7xm14i7758l \
+	verify_file_qiwl3c7v3jw9zqsfr8zssd3s6 \
+	bool_46l1pzm25w2xwkvi4v1a5i0tz
+alias negate=negate_6u8347rgmpiqy0ux6a2z95r5r
+alias die=die_pjf789l5nvst89qlpnyb6ewi6
+alias warn=warn_20dbm3btcywaax7d65dtwsmd4
+alias verify_file=verify_file_1kfahbssvi08azw7755lducfr
+alias diff_files=diff_files_pil99nq97pgic3ppjqrphlfza
+alias x11_active=x11_active_7i7vgxrjtgw7b5qw4ebtfn2rw
+alias diff_files=diff_files_pil99nq97pgic3ppjqrphlfza
+
+
+OLD="$1"; NEW="$2"
+
+
+if [ $# != 2 ]; then
+	die "Usage: ${0##*/} <oldfile> <newfile>"
+fi
+verify_file "$OLD"
+verify_file "$NEW"
+if cmp -s "$OLD" "$NEW"; negate $? && x11_active; then
+	diff_files --gui --text -- "$OLD" "$NEW"
+fi
+diff_files --text -- "$OLD" "$NEW"

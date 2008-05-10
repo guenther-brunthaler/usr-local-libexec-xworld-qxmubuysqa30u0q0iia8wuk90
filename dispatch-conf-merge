@@ -1,0 +1,85 @@
+#! /bin/sh
+# Combined gui/textmode merge for dispatch-conf
+#
+# Customize functions gui_merge and console_merge as desired.
+#
+# This script should have been saved
+# as "/usr/local/libexec/dispatch-conf-merge".
+#
+# In order to make dispatch-conf use this script, replace
+# the "merge"-setting in /etc/dispatch-conf.conf by this:
+#
+# > # Tool for interactive merges.
+# > # %s output file
+# > # %s old file
+# > # %s new file
+# > merge="/usr/local/libexec/dispatch-conf-merge %s %s %s"
+#
+# Note: You have to remove the "# > "-prefix from each line
+# after copying the above lines to /dispatch-conf.conf!
+#
+# $HeadURL: /caches/xsvn/uxadm/trunk/usr/local/libexec/dispatch-conf-merge $
+# $Author: root $
+# $Date: 2007-09-24T19:41:43.514908Z $
+# $Revision: 1013 $
+#
+# Written in 2007 by Guenther Brunthaler
+
+
+. /etc/importer_jh7tgj4vn9zxp88l71gv42837.sh \
+	verify_file_qiwl3c7v3jw9zqsfr8zssd3s6 \
+	x11_04iktrikbitbqwkgkg4ehlfag \
+	gui_merge_files_mwy9pu53xhsysmfq8yu85c4wb \
+	persistence_3ekpmfjep3rrg6n549fyry4af \
+	locale_mkkvnakkq96zpim42y43p58q8
+alias die=die_pjf789l5nvst89qlpnyb6ewi6
+alias warn=warn_20dbm3btcywaax7d65dtwsmd4
+alias run=run_ty1dcl3j6kz69u57u0xzyr88y
+alias varset=varset_er08gnsy5pcx8gsgmg94a82nr
+alias have_dir=have_dir_q6df8dwdxxarl1dx01x44qaeg
+alias verify_file=verify_file_1kfahbssvi08azw7755lducfr
+alias x11_active=x11_active_7i7vgxrjtgw7b5qw4ebtfn2rw
+alias merge_files=merge_files_1ierf5wdd3ctyiunynyybwziq
+alias yesno=yesno_ahguurbfb2g7pjivp35r5q7q9
+alias load_state=load_state_reau0uttmn018mqm9vf39xxk2
+alias save_state=save_state_sxpwj4il6izyf25c5a0rgss0d
+
+
+OUT="$1"; OLD="$2"; NEW="$3"
+
+
+console_merge() {
+	merge_files --text -- "$OLD" "$NEW" "$OUT"
+}
+
+
+merge_different() {
+	WANTED_GUI=
+	x11_active && WANTED_GUI=Y
+	load_state 'dispatch-conf_fyrgl8kbf0e3vtgstyn79uq4i' \
+		merge_gui WANTED_GUI "$WANTED_GUI"
+	if x11_active; then
+		yesno WANTED_GUI "Merge files using GUI tool" \
+			"$WANTED_GUI"
+		if [ -n "$WANTED_GUI" ]; then
+			merge_files --gui --text -- "$OLD" "$NEW" "$OUT"
+		else
+			console_merge
+		fi
+	else
+		console_merge
+	fi
+	save_state
+}
+
+
+if [ $# != 3 ]; then
+	die "Usage: ${0##*/} <merged_outfile> <oldfile> <newfile>"
+fi
+verify_file "$OLD"
+verify_file "$NEW"
+if cmp -s "$OLD" "$NEW"; then
+	console_merge
+else
+	merge_different
+fi

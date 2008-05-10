@@ -1,0 +1,117 @@
+#! /bin/sh
+# Combined gui/textmode diff for dispatch-conf
+#
+# Customize functions gui_showdiff and console_showdiff as desired.
+#
+# This script should have been saved
+# as "/usr/local/libexec/dispatch-conf-diff".
+#
+# In order to make dispatch-conf use this script, replace
+# the "diff"-setting in /etc/dispatch-conf.conf by this:
+#
+# > # Diff for display
+# > # %s old file
+# > # %s new file
+# > diff="/usr/local/libexec/dispatch-conf-diff %s %s"
+#
+# Note: You have to remove the "# > "-prefix from each line
+# after copying the above lines to /dispatch-conf.conf!
+#
+# Basic idea: The first time, always a command line diff is shown.
+# If the diff operation is repeated for the very same file,
+# the user is prompted whether to invoke a graphical tool.
+# This prompt is only done if $DISPLAY has been set.
+#
+# $HeadURL: /caches/xsvn/uxadm/trunk/usr/local/libexec/dispatch-conf-diff $
+# $Author: root $
+# $Date: 2007-09-24T16:04:18.863322Z $
+# $Revision: 1006 $
+#
+# Written in 2007 by Guenther Brunthaler
+
+
+. /etc/importer_jh7tgj4vn9zxp88l71gv42837.sh \
+	verify_file_qiwl3c7v3jw9zqsfr8zssd3s6 \
+	locale_mkkvnakkq96zpim42y43p58q8 \
+	x11_04iktrikbitbqwkgkg4ehlfag \
+	persistence_3ekpmfjep3rrg6n549fyry4af \
+	diff_files_654jerb60jqt2i7xm14i7758l
+alias die=die_pjf789l5nvst89qlpnyb6ewi6
+alias warn=warn_20dbm3btcywaax7d65dtwsmd4
+alias run=run_ty1dcl3j6kz69u57u0xzyr88y
+alias varset=varset_er08gnsy5pcx8gsgmg94a82nr
+alias have_dir=have_dir_q6df8dwdxxarl1dx01x44qaeg
+alias verify_file=verify_file_1kfahbssvi08azw7755lducfr
+alias yesno=yesno_ahguurbfb2g7pjivp35r5q7q9
+alias x11_active=x11_active_7i7vgxrjtgw7b5qw4ebtfn2rw
+alias load_state=load_state_reau0uttmn018mqm9vf39xxk2
+alias save_state=save_state_sxpwj4il6izyf25c5a0rgss0d
+alias diff_files=diff_files_pil99nq97pgic3ppjqrphlfza
+
+
+OLD="$1"; NEW="$2"
+
+
+console_showdiff() {
+	diff_files --text --page -- "$OLD" "$NEW"
+}
+
+
+# $1: result variable
+# $2 ...: files
+checksum_files() {
+	local var cs
+	var=$1; shift
+	cs=empty
+	while [ $# -gt 0 ]; do
+		verify_file "$1"
+		cs=$(
+			{
+				echo "$cs"
+				run cat "$1"
+			} | run md5sum -b | cut -c 1-32
+		)
+		shift
+	done
+	varset $var $cs
+}
+
+
+showdiff_different() {
+	local md5
+	checksum_files md5 "$OLD" "$NEW"
+	WANTED_GUI=
+	x11_active && WANTED_GUI=Y
+	load_state 'dispatch-conf_fyrgl8kbf0e3vtgstyn79uq4i' \
+		last_md5 LAST_MD5 N/A \
+		diff_gui WANTED_GUI "$WANTED_GUI"
+	if [ "$LAST_MD5" = "$md5" ]; then
+		if x11_active; then
+			yesno WANTED_GUI "Compare files using GUI tools" \
+				"$WANTED_GUI"
+			if [ -n "$WANTED_GUI" ]; then
+				diff_files --gui --text --page -- "$OLD" "$NEW"
+			else
+				console_showdiff
+			fi
+		else
+			console_showdiff
+		fi
+	else
+		LAST_MD5=$md5
+		console_showdiff
+	fi
+	save_state
+}
+
+
+if [ $# != 2 ]; then
+	die "Usage: ${0##*/} <oldfile> <newfile>"
+fi
+verify_file "$OLD"
+verify_file "$NEW"
+if cmp -s "$OLD" "$NEW"; then
+	console_showdiff
+else
+	showdiff_different
+fi

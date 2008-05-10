@@ -1,0 +1,109 @@
+#! /bin/sh
+# Updates kernel modules, binaries, DLL dependencies.
+# Assumes that a linker-cache is not required.
+# Does not build the initramfs image.
+
+
+EXTRACTED="${1:-`pwd`}"
+KERNEL="/usr/src/linux"
+
+
+die() {
+	echo "ERROR: $*" >& 2
+	exit 1
+}
+
+
+run() {
+	"$@" && return
+	die "Failed executing >>>$*<<< return code ${?}!"
+}
+
+
+libfilter() {
+	perl -ne '
+		if (
+			m@
+				^ \s+
+				(?:
+					(/.*?) | .* => \s+ (/.*?)
+				)
+				\s+ \(0x [[:xdigit:]]+ \)
+			@x
+		) {print "$+\n"}
+        		            
+	'
+}
+
+
+run test -d "$EXTRACTED"
+EXTRACTED=`run readlink --canonicalize "$EXTRACTED"`
+run test x"$EXTRACTED" != x/
+for DIR in bin sbin lib usr mnt var tmp etc; do
+	run test -d "$EXTRACTED/$DIR"
+done
+. /etc/make.conf
+run test -d "$EXTRACTED"
+test -n "$KERNEL_DIR" && KERNEL=$KERNEL_DIR
+test -n "$KBUILD_OUTPUT" && KERNEL=$KBUILD_OUTPUT
+KVERSION="`cd \"$KERNEL\" && make -s kernelrelease`"
+FROM="/lib/modules/$KVERSION"
+INTO="$EXTRACTED/lib/modules"
+test -d "$INTO" || die "Directory $INTO does not exist!"
+find "$INTO" -maxdepth 1 ! -wholename "$INTO" ! -name "$KVERSION" \
+	-exec rm -rf "{}" \; \
+	|| die "Cannot wipe old kernels!"
+echo "$FROM" | cpio -pmu "$EXTRACTED" || die "Cannot clone modules directory!"
+INTO="$INTO/$KVERSION"
+echo "Synchronizing kernel modules..."
+rsync -av --del --delete-excluded \
+	--filter 'merge,+ ../kmod.includes' \
+	--filter 'hide /modules.*' \
+	--filter 'protect /modules.*' \
+	--exclude '*' \
+	"$FROM/" "$INTO/" \
+	|| die "Could not rsync kernels!"
+depmod -b "$EXTRACTED" -v "$KVERSION" \
+	|| die "Could not create module mappings for $KVERSION!"
+FROM=""
+INTO="$EXTRACTED"
+echo "Synchronizing utilities from '$FROM/' into '$INTO/'..."
+rsync -av --del \
+	--filter 'merge,+ ../bin.includes' \
+	--exclude '*' \
+	"$FROM/" "$INTO/" \
+	|| die "Could not rsync utilities!"
+cd "$EXTRACTED" || die "Cannot cd to creation dir!"
+run test -f init && run test -x init
+run rm lib/*so*
+run find -type f -executable > names
+run file -f names > filed
+run test x"`wc -l names | cut -d' ' -f1`" = x"`wc -l filed | cut -d' ' -f1`"
+run paste -d: names filed | run grep ELF | run grep executable \
+	| run cut -d: -f1 | run sort -u \
+	| while read FILE; do
+		ldd "$FILE" 2> /dev/null
+	done | libfilter | LC_ALL=C run sort -u > candidates
+while true; do
+	run cat candidates > dlls
+	ANY=
+	while read FILE; do
+		ldd "$FILE" 2> /dev/null | libfilter \
+		| while read DLL; do
+			fgrep -x "$DLL" > /dev/null 2>&1 && continue
+			printf "%s\n" "$DLL" >> dlls
+			ANY=Y
+		done
+	done < candidates
+	test -n "$ANY" || break
+	LC_ALL=C run sort -u < dlls > candidates
+done
+while read FILE; do
+	while test -L "$FILE"; do
+		FILE=`run readlink --canonicalize "$FILE"`
+	done
+	DF=lib/${FILE##*/}
+	run rsync -va "$FILE" "$DF"
+done < candidates
+run rm names filed dlls candidates
+ldconfig -v -r . -N -f /dev/null || die "Cannot update library symlinks!"

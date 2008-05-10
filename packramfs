@@ -1,0 +1,154 @@
+#! /bin/sh
+
+
+die() {
+	printf "ERROR: %s\n" "$*" >& 2
+	exit 1
+}
+
+
+run() {
+	"$@" && return
+	die "Could not execute >>>$*<<< return code ${?}!"
+}
+
+
+wrout() {
+	if test $# != 0; then
+		run printf "%s\n" "$*" | wrout
+		return
+	fi
+	run fmt -s -w `run tput cols`
+}
+
+
+usage() {
+	local APP
+	APP=${0##*/}
+	wrout <<- EOT | run less -F
+	$APP - pack or extract initramfs image
+	
+	$APP can either pack the contents of an image subdirectory into an
+	initramfs gzipped file, or unpack an image subdirectory from the
+	contents of an already existing gzipped initramfs file.
+	
+	Usage: $APP [ options ... ] ( <imagefile> | <imagedir>.dir )
+
+	where:
+	
+	<imagefile>: The name of a gzipped cpio-archive to be extracted. The
+	name must not end with ".dir". The extraction image directory will
+	have the same name, but with ".dir" appended.
+	
+	<imagedir>.dir: The name of an image directory to be packed. The name
+	must end with ".dir". The image file to be created will have the same
+	name, but with the ".dir" stripped off.
+	
+	Options supported:
+	
+	--: Stop option processing and assume the remaining arguments
+	to be non-options whether or not they start with "-".
+	
+	--help, -h: Display this help.
+	
+	--version: Display version information.
+
+	--force, -f: Overwrite the target if it already exists. In case
+	of unpacking, the directory and all its contents will be removed before
+	the unpacking operation starts. Use with care!
+	
+	$APP creates or unpacks gzipped cpio-Archives in a format that is
+	accepted by the Linux kernel as a valid initial RamFS image.
+	
+	When passed to the kernel as an initrd, the kernel will unpack its
+	contents into the filesystem cache on startup and execute its
+	/init executable (which might be a script).
+	
+	See the "early-userspace" document in the "Documentation" subdirectory
+	of the Linux kernel source file tree for more information.
+	
+	<initfile> and <imagedir>.dir can both be symlinks. In this case, $APP
+	works with the basenames of the file/directory the symlinks point to.
+	
+	In case of packing, if the resulting target file already exists and
+	also is a symlink, the current symlink target will be overwritten
+	instead of replacing the symlink itself with the packed image file.
+
+	$APP (c) 2008 by Guenther Brunthaler
+EOT
+}
+
+
+# Start of command line processing.
+# Define presets.
+IMAGE=
+FORCE=
+#
+COPTS=
+while true; do
+	if [ -z "$COPTS" ]; then
+		case "$1" in
+			-?*) COPTS="$1"; shift;;
+			*) break;;
+		esac
+	fi
+	if [ "${COPTS#--}" = "$COPTS" ]; then
+		TAIL="${COPTS#-?}"; # Switch clustering.
+		COPT="${COPTS%$TAIL}"; COPTS="${TAIL:+-}$TAIL"
+	else
+		COPT="$COPTS"; COPTS=
+	fi
+	# Any arguments are at $1 and onwards; must be shifted off.
+	case "$COPT" in
+		--) break;; # Must be first!
+                --help | -h) usage; exit;;
+		--version)
+			# Sychronize this with the usage text!
+			echo "Version 1.0"
+			exit;;
+		--force | -f) FORCE=1;;
+		*) die "Unknown option '$COPT'!";; # Must be last!
+	esac
+done
+# Shift off ordinal arguments.
+#test $# -ge 1 && { WORKDIR="$1"; shift; }
+test $# -ge 1 || die "Missing argument - image file or image directory!"
+IMAGE="$1"; shift
+# Check for excess arguments.
+test $# = 0 || die "Unexpected excess arguments: $*"
+# End of command line processing.
+test -e "$IMAGE" || die "Could not find '$IMAGE'!"
+IMAGE=`run readlink --canonicalize "$IMAGE"`
+test -e "$IMAGE" || die "Could not find dereferenced '$IMAGE'!"
+if test -d "$IMAGE"; then
+	# Pack.
+	if test "$IMAGE" = "${IMAGE%.dir}"; then
+		die "'$IMAGE' must have a '.dir' suffix!"
+	fi
+	IMAGE=${IMAGE%.dir}
+	if test -e "$IMAGE"; then
+		test -n "$FORCE" || die "'$IMAGE' already exists!"
+	fi
+	(
+		run cd "$IMAGE.dir"
+		run find -xdev -print0 | run sort -z \
+		| run cpio -o0 -H newc
+	) | run gzip -9 > "$IMAGE"
+	echo "Successfully created '$IMAGE' from '$IMAGE.dir'!"
+else
+	# Extract.
+	test -f "$IMAGE" || die "'$IMAGE' is not a normal file!"
+	if test "$IMAGE" != "${IMAGE%.dir}"; then
+		die "'$IMAGE' must not have a '.dir' suffix!"
+	fi
+	if test -e "$IMAGE.dir"; then
+		test -n "$FORCE" || die "'$IMAGE.dir' already exists!"
+		rm -rf "$IMAGE.dir"
+	fi
+	run mkdir "$IMAGE.dir"
+	run zcat "$IMAGE" | (
+		run cd "$IMAGE.dir"
+		run cpio -id --preserve-modification-time
+		echo "Successfully extracted '$IMAGE.dir' from '$IMAGE'!"
+	)
+fi
