@@ -111,7 +111,7 @@ rsync -av --del \
 	|| die "Could not rsync utilities!"
 cd "$EXTRACTED" || die "Cannot cd to creation dir!"
 run test -f init && run test -x init
-run rm lib/*so*
+ls -1d lib/*so* > /dev/null 2>& 1 && run rm lib/*so*
 run find -type f -executable > names
 run file -f names > filed
 run test x"`wc -l names | cut -d' ' -f1`" = x"`wc -l filed | cut -d' ' -f1`"
