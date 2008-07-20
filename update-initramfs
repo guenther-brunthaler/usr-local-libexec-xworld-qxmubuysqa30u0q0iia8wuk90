@@ -5,7 +5,6 @@
 
 
 EXTRACTED="${1:-`pwd`}"
-KERNEL="/usr/src/linux"
 
 
 die() {
@@ -36,17 +35,54 @@ libfilter() {
 }
 
 
+# Set up $KBUILD_OUTPUT.
+get_kernel() {
+	case $1 in
+		2)
+			KERNEL=$KBUILD_OUTPUT
+			get_kernel 3 && return
+			KERNEL=$KERNEL_DIR
+			get_kernel 3 || return
+			KBUILD_OUTPUT=$KERNEL
+			;;
+		3)
+			test -n "$KERNEL" || return
+			test -d "$KERNEL" || return
+			test -f "$KERNEL"/.config
+			return
+			;;
+		*)
+			local KERNEL
+			get_kernel 2 && return
+			. /etc/make.conf
+			get_kernel 2 && return
+			KERNEL_DIR="/usr/src/linux"
+			get_kernel 2 && return
+			die "Cannot determine kernel build directory!"
+			;;
+	esac
+}
+
+
 run test -d "$EXTRACTED"
 EXTRACTED=`run readlink --canonicalize "$EXTRACTED"`
 run test x"$EXTRACTED" != x/
 for DIR in bin sbin lib usr mnt var tmp etc; do
 	run test -d "$EXTRACTED/$DIR"
 done
-. /etc/make.conf
-run test -d "$EXTRACTED"
-test -n "$KERNEL_DIR" && KERNEL=$KERNEL_DIR
-test -n "$KBUILD_OUTPUT" && KERNEL=$KBUILD_OUTPUT
-KVERSION="`cd \"$KERNEL\" && make -s kernelrelease`"
+DIR=initramfs.template
+INTO="$EXTRACTED"
+FROM=$INTO
+while test ! -d "$FROM/$DIR"; do
+	FROM=`readlink --canonicalize "$FROM"/..` || die "'$DIR' not found!"
+done
+FROM=$FROM/$DIR
+run test -d "$FROM"
+echo "Synchronizing miscellaneous binaries from '$FROM/' into '$INTO/'..."
+rsync -av "$FROM/" "$INTO/" \
+	|| die "Could not rsync binaries!"
+get_kernel
+KVERSION="`cd \"$KBUILD_OUTPUT\" && make -s kernelrelease`"
 FROM="/lib/modules/$KVERSION"
 INTO="$EXTRACTED/lib/modules"
 test -d "$INTO" || die "Directory $INTO does not exist!"
