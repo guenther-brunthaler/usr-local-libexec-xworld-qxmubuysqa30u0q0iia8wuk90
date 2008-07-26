@@ -82,6 +82,7 @@ echo "Synchronizing miscellaneous binaries from '$FROM/' into '$INTO/'..."
 rsync -av "$FROM/" "$INTO/" \
 	|| die "Could not rsync binaries!"
 get_kernel
+unset KERNEL_DIR
 KVERSION="`cd \"$KBUILD_OUTPUT\" && make -s kernelrelease`"
 FROM="/lib/modules/$KVERSION"
 INTO="$EXTRACTED/lib/modules"
@@ -143,3 +144,4 @@ while read FILE; do
 done < candidates
 run rm names filed dlls candidates
 ldconfig -v -r . -N -f /dev/null || die "Cannot update library symlinks!"
+echo "Done updating version $KVERSION from $KBUILD_OUTPUT."
