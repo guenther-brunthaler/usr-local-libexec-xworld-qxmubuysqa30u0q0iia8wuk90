@@ -131,7 +131,15 @@ if test -d "$IMAGE"; then
 	fi
 	(
 		run cd "$IMAGE.dir"
-		run find -xdev -print0 | run sort -z \
+		run find -xdev \( \
+			\( \
+				-path ./maint \
+				-o -path ./.bzrignore \
+				-o -path ./.bzr \
+			\) \
+			-prune \
+		\) -o -print0 \
+		| run sort -z \
 		| run cpio -o0 -H newc
 	) | run gzip -9 > "$IMAGE"
 	echo "Successfully created '$IMAGE' from '$IMAGE.dir'!"
