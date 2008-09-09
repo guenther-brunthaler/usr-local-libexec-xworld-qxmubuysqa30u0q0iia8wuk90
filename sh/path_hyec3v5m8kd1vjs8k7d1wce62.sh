@@ -11,9 +11,9 @@
 #   Add <path> at the end of $PATH, but only if <path> is actually an existing
 #   directory and if it is not already part of $PATH.
 #
-# --insert <path>
-#   Insert <path> at the beginning of $PATH, but only if <path> is actually an
-#   existing directory and if it is not already part of $PATH.
+# --prepend <path>
+#   Insert <path> before the beginning of $PATH, but only if <path> is
+#   actually an existing directory and if it is not already part of $PATH.
 #
 # written in 2008 by Guenther Brunthaler
 
@@ -23,7 +23,7 @@ path_helper_hyec3v5m8kd1vjs8k7d1wce62() {
 	local TARGET RPATH PCOMP OPT_FRONT
 	while test $# != 0; do
 		case $1 in
-			--insert) OPT_FRONT=1; TARGET=$2; shift;;
+			--prepend) OPT_FRONT=1; TARGET=$2; shift;;
 			--append) TARGET=$2; shift;;
 			*) break;;
 		esac
@@ -50,7 +50,7 @@ path_helper_hyec3v5m8kd1vjs8k7d1wce62() {
 path_hyec3v5m8kd1vjs8k7d1wce62() {
 	while test $# != 0; do
 		case $1 in
-			--append | --insert)
+			--append | --prepend)
 				path_helper_hyec3v5m8kd1vjs8k7d1wce62 \
 					"$1" "$2"
 				shift
