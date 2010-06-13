@@ -1,0 +1,29 @@
+#! /bin/sh
+# $1: Original file to be obtain the merged output
+# $2: Other file
+
+
+die() {
+	echo "ERROR: $*" >& 2
+	false; exit
+}
+
+
+run() {
+	"$@" && return
+	die "Command >>>${*}<<< failed with return code ${?}!"
+}
+
+
+system() {
+	REPLY=`run "$@"` || exit
+}
+
+
+run test $# = 2
+run test -f "$1"
+run test -f "$2"
+system tempfile; T=$REPLY
+trap "rm \"$T\"" 0
+run imediff2 -u -o "$T" "$1" "$2"
+run cat "$T" > "$1"
