@@ -6,7 +6,8 @@
 # (Will typically be "start" or "stop".)
 
 
-test x"${RC_GOT_FUNCTIONS}" != x"yes" && . /sbin/functions.sh
+test -z "$RC_GOT_FUNCTIONS" \
+	&& . /usr/local/libexec/xworld/sh/gentoo-functions.sh
 (
 	SVCNAME=$1
 	RC_QUIET_STDOUT=yes
