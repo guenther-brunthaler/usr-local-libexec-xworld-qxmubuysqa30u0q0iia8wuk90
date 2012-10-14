@@ -21,6 +21,7 @@
 # Process a single action statement.
 path_helper_hyec3v5m8kd1vjs8k7d1wce62() {
 	local TARGET RPATH PCOMP OPT_FRONT
+	OPT_FRONT=; TARGET=
 	while test $# != 0; do
 		case $1 in
 			--prepend) OPT_FRONT=1; TARGET=$2; shift;;
