@@ -1,0 +1,31 @@
+#! /bin/sh
+MINDIST_HOURS=6
+MINDIST_MINUTES=0
+#
+set -e
+STATEFILE=$HOME/.local/share/misc/${0##*/}
+# The state file must exist, but it can initially be empty.
+test -f "$STATEFILE"
+exec 9>> "$STATEFILE"
+flock -w 10 9
+NOT_BEFORE=0
+WPID=
+. "$STATEFILE"
+NOW=`date +%s`
+test $NOW -lt $NOT_BEFORE && exit
+test -n "$WPID" && test -e /proc/"$WPID" && exit
+# Start new indexing run.
+echo $$ >> "$STATEFILE"
+exec 9>& -
+# The actual work to be done.
+recollindex && RC=$? || RC=$?
+# Calculate new soonest event.
+NOW=`date +%s`
+MINDIST_SECONDS=`expr '(' $MINDIST_HOURS '*' 60 + $MINDIST_MINUTES ')' '*' 60`
+MINDIST_SECONDS=15
+NOT_BEFORE=`expr $NOW + $MINDIST_SECONDS`
+(
+	flock -n 9 || exit
+	echo "NOT_BEFORE=$NOT_BEFORE" > "$STATEFILE"
+) 9>> "$STATEFILE" || RC=$?
+exit $RC
