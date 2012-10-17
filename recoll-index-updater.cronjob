@@ -1,4 +1,5 @@
 #! /bin/sh
+# Presets. Can be edited in the state file.
 MINDIST_HOURS=6
 MINDIST_MINUTES=0
 #
@@ -15,10 +16,10 @@ NOW=`date +%s`
 test $NOW -lt $NOT_BEFORE && exit
 test -n "$WPID" && test -e /proc/"$WPID" && exit
 # Start new indexing run.
-echo $$ >> "$STATEFILE"
+echo "WPID=$$" >> "$STATEFILE"
 exec 9>& -
 # The actual work to be done.
-recollindex && RC=$? || RC=$?
+recollindex > /dev/null 2>& 1 && RC=$? || RC=$?
 # Calculate new soonest event.
 NOW=`date +%s`
 MINDIST_SECONDS=`expr '(' $MINDIST_HOURS '*' 60 + $MINDIST_MINUTES ')' '*' 60`
@@ -26,6 +27,10 @@ MINDIST_SECONDS=15
 NOT_BEFORE=`expr $NOW + $MINDIST_SECONDS`
 (
 	flock -n 9 || exit
-	echo "NOT_BEFORE=$NOT_BEFORE" > "$STATEFILE"
+	{
+		echo "NOT_BEFORE=$NOT_BEFORE"
+		echo "MINDIST_HOURS=$MINDIST_HOURS"
+		echo "MINDIST_MINUTES=$MINDIST_MINUTES"
+	} > "$STATEFILE"
 ) 9>> "$STATEFILE" || RC=$?
 exit $RC
