@@ -23,7 +23,6 @@ recollindex > /dev/null 2>& 1 && RC=$? || RC=$?
 # Calculate new soonest event.
 NOW=`date +%s`
 MINDIST_SECONDS=`expr '(' $MINDIST_HOURS '*' 60 + $MINDIST_MINUTES ')' '*' 60`
-MINDIST_SECONDS=15
 NOT_BEFORE=`expr $NOW + $MINDIST_SECONDS`
 (
 	flock -n 9 || exit
