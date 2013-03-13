@@ -1,0 +1,6 @@
+#! /bin/sh
+# Add to your $HOME/.bazaar/bazaar.conf to section:
+# [DEFAULT]
+# the line:
+# editor = /usr/local/libexec/xworld/bzr-joe-editor
+exec joe -rmargin 73 -wordwrap -- "$@"
