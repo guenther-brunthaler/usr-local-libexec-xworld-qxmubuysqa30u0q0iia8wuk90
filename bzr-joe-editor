@@ -3,6 +3,9 @@
 # [DEFAULT]
 # the line:
 # editor = /usr/local/libexec/xworld/bzr-joe-editor
+#
+# This can also be done with the following command:
+# $ sed -ie '/^\[DEFAULT]$/a editor = /usr/local/libexec/xworld/bzr-joe-editor' ~/.bazaar/bazaar.conf
 l=`locale | sed -e 's,^LANG=,,; t; d'`
 cs=${l##*.}
 test -x"$cs" != x"$l" || cs=
