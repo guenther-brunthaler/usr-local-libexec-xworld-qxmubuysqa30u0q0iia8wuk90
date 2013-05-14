@@ -2,9 +2,10 @@
 # Source this snippet for modifying $PATH.
 #
 # The arguments may consist of any number of action statements, they will all
-# be performed in the order specified.
+# be performed in the order specified. If the path to be added is already part
+# of $PATH, it will be removed from its old position before the addition.
 #
-# Note that passing arguments to the "." command is not* portable!
+# Note that passing arguments to the "." command is *not* portable!
 #
 # Use the "set" command to set the arguments for sourcing this script, use the
 # --stop option to save old arguments after it.
@@ -13,11 +14,11 @@
 #
 # --append <path>
 #   Add <path> at the end of $PATH, but only if <path> is actually an existing
-#   directory and if it is not already part of $PATH.
+#   directory.
 #
 # --prepend <path>
 #   Insert <path> before the beginning of $PATH, but only if <path> is
-#   actually an existing directory and if it is not already part of $PATH.
+#   actually an existing directory.
 #
 # Options only valid after all action statements:
 #
@@ -27,60 +28,46 @@
 #   after the --stop, which will become the current arguments again after
 #   sourcing this script. Typically used as '--stop "$@"'.
 #
+# version 13.134
 # written in 2008 - 2013 by Guenther Brunthaler
-
-
-# Process a single action statement.
-path_helper_hyec3v5m8kd1vjs8k7d1wce62() {
-	local TARGET RPATH PCOMP OPT_FRONT
-	OPT_FRONT=; TARGET=
-	while test $# != 0
-	do
-		case $1 in
-			--prepend) OPT_FRONT=1; TARGET=$2; shift;;
-			--append) TARGET=$2; shift;;
-			*) break;;
-		esac
-		shift
-	done
-	test ! -d "$TARGET" && return
-	RPATH=$PATH
-	while true
-	do
-		PCOMP=${RPATH%%:*}
-		test x"$PCOMP" = x"$TARGET" && return
-		test x"$PCOMP" = x"$RPATH" && break
-		RPATH=${RPATH#$PCOMP:}
-	done
-	if test -n "$OPT_FRONT"
-	then
-		PATH=$TARGET${PATH:+:}$PATH
-	else
-		PATH=$PATH${PATH:+:}$TARGET
-	fi
-	export PATH
-}
 
 
 # Process a list of action statements.
 path_hyec3v5m8kd1vjs8k7d1wce62() {
+	local target path prefix cmd
+	path=:$PATH:
 	while test $# != 0
 	do
 		case $1 in
-			--append | --prepend)
-				path_helper_hyec3v5m8kd1vjs8k7d1wce62 \
-					"$1" "$2"
-				shift
-				;;
+			--prepend | --append) cmd=$1;;
 			--stop) break;;
 			*)
 				echo "Warning: Ignored arguments >>>$*<<<" \
 					>& 2
-				return 1
+				false || return
 				;;
 		esac
-		shift
+		test -d "$2" || cmd=
+		target=:$2:; shift 2
+		while
+			prefix=${path%"$target"*}
+			test x"$prefix" != x"$path"
+		do
+			path=$prefix:${path##*"$target"}
+		done
+		case $cmd in
+			--prepend) path=$target$path;;
+			--append) path=$path$target
+		esac
 	done
+	while
+		prefix=${path%::*}
+		test x"$prefix" != x"$path"
+	do
+		path=$prefix:${path##*::}
+	done
+	path=${path%:}; PATH=${path#:}
+	export PATH
 }
 
 
@@ -94,5 +81,4 @@ do
 	fi
 	shift
 done
-unset -f path_hyec3v5m8kd1vjs8k7d1wce62 \
-	path_helper_hyec3v5m8kd1vjs8k7d1wce62
+unset -f path_hyec3v5m8kd1vjs8k7d1wce62
