@@ -1,11 +1,6 @@
 #! /bin/sh
-# Add to your $HOME/.gitconfig to section:
-# [config]
-# the line:
-# editor = /usr/local/libexec/xworld/bzr-joe-editor
-#
-# This can also be done with the following command:
-# $ sed -ie '/^\[core]$/a editor = /usr/local/libexec/xworld/git-joe-editor' ~/.gitconfig
+# Use the following command to integrate this script with git:
+# $ git config --global core.editor /usr/local/libexec/xworld/git-joe-editor
 set -e
 t=
 cleanup() {
