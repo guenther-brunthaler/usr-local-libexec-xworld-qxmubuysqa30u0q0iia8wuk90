@@ -1,0 +1,32 @@
+#! /bin/sh
+# Add to your $HOME/.gitconfig to section:
+# [config]
+# the line:
+# editor = /usr/local/libexec/xworld/bzr-joe-editor
+#
+# This can also be done with the following command:
+# $ sed -ie '/^\[core]$/a editor = /usr/local/libexec/xworld/git-joe-editor' ~/.gitconfig
+set -e
+t=
+cleanup() {
+	test -n "$t" && { rm -- "$t"; t=; }
+}
+trap 'cleanup; echo "Failed!" >& 2' 0
+test x"$#" = x1
+t=`tempfile`
+cat <<- 'EOF' > "$t"
+#Example text for the headline length............
+#================================================
+
+#======================================================================
+#This is an example text of     the message body and its maximum length
+#which should never be exceeded.
+EOF
+cat -- "$@" >> "$t"
+cat "$t" > "$1"
+cleanup
+l=`locale | sed -e 's,^LANG=,,; t; d'`
+cs=${l##*.}
+test -x"$cs" != x"$l" || cs=
+l=en_US.${cs:-utf8}
+exec joe -language "$l" -rmargin 73 -wordwrap -- +3 "$@"
