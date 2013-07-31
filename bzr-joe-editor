@@ -14,7 +14,9 @@ cleanup() {
 }
 notext() {
 	echo "No text was entered... aborting." >& 2
-	false
+	# bzr mis-iterprets any error exit code as a failure to start the
+	# editor. Therefore exiting normally.
+	exit
 }
 t=
 OK=
