@@ -1,0 +1,20 @@
+#! /bin/sh -e
+CURRENT1=$1
+CURRENT2=$2
+NEW=$3
+
+get() {
+	REPLY=`which "$1" 2> /dev/null` && test -x "$REPLY"
+}
+
+get xmessage; XM=$REPLY
+get diffuse; XMRG=$REPLY
+get md5sum; SUM=$REPLY
+
+"$XM" -timeout 10 "Merge changes into 'Local'!" &
+cp -- "$CURRENT1" "$NEW"
+trap 'rm -- "$NEW"' 0
+o=`stat "$NEW" | "$SUM"` && test -n "$o"
+"$XMRG" -L Local -L Remote "$NEW" "$CURRENT2"
+n=`stat "$NEW" | "$SUM"` && test -n "$n"
+test x"$o" != x"$n" && trap - 0
