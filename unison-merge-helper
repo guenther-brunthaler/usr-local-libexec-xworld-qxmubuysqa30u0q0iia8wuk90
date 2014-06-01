@@ -3,6 +3,22 @@ CURRENT1=$1
 CURRENT2=$2
 NEW=$3
 
+exit_help() {
+	echo "Usage example:" >& 2
+	echo "merge = Regex .*\.(lst|txt|asciidoc|conf) ->" \
+		"/usr/local/libexec/xworld/unison-merge-helper" \
+		"CURRENT1 CURRENT2 NEW" >& 2
+	exit
+}
+
+while getopts h OPT
+do
+	case $OPT in
+		h | *) exit_help;;
+	esac
+done
+shift `expr $OPTIND - 1`
+
 get() {
 	REPLY=`which "$1" 2> /dev/null` && test -x "$REPLY"
 }
