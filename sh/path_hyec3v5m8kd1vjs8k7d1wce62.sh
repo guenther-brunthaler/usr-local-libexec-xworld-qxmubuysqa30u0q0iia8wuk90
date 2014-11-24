@@ -1,11 +1,12 @@
 #! /bin/false
-# Source this snippet for modifying and exporting $PATH.
+# Source this snippet for modifying $PATH-like environment variables.
 #
 # The arguments may consist of any number of action statements. They will all
-# be performed in the order specified. If the path to be added is already part
+# be executed in the order specified. If the path to be added is already part
 # of $PATH, it will be removed from its old position before the addition. If
 # one of the specified paths does not exist this path will be ignored
-# silently.
+# silently. If the result of the modification is a non-empty variable, it
+# will be exported. Otherwise, the empty environment variable will be unset.
 # 
 #
 # Note that passing arguments to the "." command is *not* portable!
@@ -35,7 +36,7 @@
 #   after the --stop, which will become the current arguments again after
 #   sourcing this script. Typically used as '--stop "$@"'.
 #
-# Version 14.328
+# Version 14.328.1
 # Written in 2008 - 2014 by Guenther Brunthaler
 
 
@@ -78,7 +79,12 @@ path_hyec3v5m8kd1vjs8k7d1wce62() {
 		path=$prefix:${path##*::}
 	done
 	path=${path%:}; path=${path#:}
-	eval "$var=\$path"; export $var
+	if test -n "$path"
+	then
+		eval "$var=\$path"; export $var
+	else
+		unset $var
+	fi
 }
 
 
