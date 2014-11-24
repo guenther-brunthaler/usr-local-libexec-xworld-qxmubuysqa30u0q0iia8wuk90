@@ -1,9 +1,12 @@
 #! /bin/false
-# Source this snippet for modifying $PATH.
+# Source this snippet for modifying and exporting $PATH.
 #
-# The arguments may consist of any number of action statements, they will all
+# The arguments may consist of any number of action statements. They will all
 # be performed in the order specified. If the path to be added is already part
-# of $PATH, it will be removed from its old position before the addition.
+# of $PATH, it will be removed from its old position before the addition. If
+# one of the specified paths does not exist this path will be ignored
+# silently.
+# 
 #
 # Note that passing arguments to the "." command is *not* portable!
 #
@@ -11,6 +14,10 @@
 # --stop option to save old arguments after it.
 #
 # Supported action statements:
+#
+# --variable <VARNAME>
+#   The environment variable to modify. Defaults to "PATH". If this option is
+#   used at all, it must be the very first option.
 #
 # --append <path>
 #   Add <path> at the end of $PATH, but only if <path> is actually an existing
@@ -28,17 +35,21 @@
 #   after the --stop, which will become the current arguments again after
 #   sourcing this script. Typically used as '--stop "$@"'.
 #
-# version 13.134
-# written in 2008 - 2013 by Guenther Brunthaler
+# Version 14.328
+# Written in 2008 - 2014 by Guenther Brunthaler
 
 
 # Process a list of action statements.
 path_hyec3v5m8kd1vjs8k7d1wce62() {
-	local target path prefix cmd
-	path=:$PATH:
+	local target var path prefix cmd
+	var=PATH; path=:$PATH:
 	while test $# != 0
 	do
 		case $1 in
+			--variable)
+				var=$2; eval "path=:\$$var:"
+				shift 2; continue
+				;;
 			--prepend | --append) cmd=$1;;
 			--stop) break;;
 			*)
@@ -66,8 +77,8 @@ path_hyec3v5m8kd1vjs8k7d1wce62() {
 	do
 		path=$prefix:${path##*::}
 	done
-	path=${path%:}; PATH=${path#:}
-	export PATH
+	path=${path%:}; path=${path#:}
+	eval "$var=\$path"; export $var
 }
 
 
