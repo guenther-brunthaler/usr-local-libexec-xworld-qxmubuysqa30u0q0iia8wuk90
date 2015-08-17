@@ -8,9 +8,10 @@
 # $ sed -ie '/^\[DEFAULT]$/a editor = /usr/local/libexec/xworld/bzr-joe-editor' ~/.bazaar/bazaar.conf
 set -e
 cleanup() {
+	local rc=$?
 	test -n "$t" && rm -- "$t"
 	test -n "$t2" && rm -- "$t2"
-	test -n "$OK" || echo 'Failed!' >& 2
+	test $rc = 0 || echo 'Failed!' >& 2
 }
 notext() {
 	echo "No text was entered... aborting." >& 2
@@ -19,9 +20,12 @@ notext() {
 	exit
 }
 t=
-OK=
+t2=
 trap cleanup 0
 test x"$#" = x1
+case $t in
+	-*) t=./$t
+esac
 t=`mktemp --suffix=.msg "${TMPDIR:-/tmp}/bzrci.XXXXXXXXXX"`
 {
 	cat
@@ -45,11 +49,10 @@ test -x"$cs" != x"$l" || cs=
 l=en_US.${cs:-utf8}
 t2=`mktemp --suffix=.tmp "${TMPDIR:-/tmp}/bzrci.XXXXXXXXXX"`
 cat -- "$t" > "$t2"
-joe -language "$l" -rmargin 73 -wordwrap -- +3 "$t"
+joe -language "$l" -rmargin 73 -wordwrap +3 "$t"
 cmp -- "$t" "$t2" > /dev/null && notext
 ws=`printf '[ \t]'`
 sed -e "/rbt1ffsagr1qrfb1519dfi80i/,\$ d; s/$ws\\+\$//" "$t" \
 | sed -e '/^#/ d' > "$t2"
 grep -v '^$' "$t2" > /dev/null || notext
 cat "$t2" > "$1"
-OK=Y

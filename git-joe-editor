@@ -25,4 +25,16 @@ l=`locale | sed -e 's,^LANG=,,; t; d'`
 cs=${l##*.}
 test -x"$cs" != x"$l" || cs=
 l=en_US.${cs:-utf8}
-exec joe -language "$l" -rmargin 73 -wordwrap -- +3 "$@"
+n=$#
+while test $n != 0
+do
+	case $1 in
+		--) ;;
+		-) set -- "$@" "$1";;
+		-*) set -- "$@" ./"$1";;
+		*) set -- "$@" "$1"
+	esac
+	shift
+	n=`expr $n - 1 || :`
+done
+exec joe -language "$l" -rmargin 73 -wordwrap +3 "$@"
