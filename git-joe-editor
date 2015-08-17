@@ -8,7 +8,7 @@ cleanup() {
 }
 trap 'cleanup; echo "Failed!" >& 2' 0
 test x"$#" = x1
-t=`tempfile`
+t=`mktemp "${TMPDIR:-/tmp}/${0##*/}.XXXXXXXXXX"`
 cat <<- 'EOF' > "$t"
 #Headline is capitalized and not longer than this:
 ##################################################

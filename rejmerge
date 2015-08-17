@@ -23,7 +23,7 @@ system() {
 run test $# = 2
 run test -f "$1"
 run test -f "$2"
-system tempfile; T=$REPLY
+system mktemp "${TMPDIR:-/tmp}/${0##*/}.XXXXXXXXXX"; T=$REPLY
 trap "rm \"$T\"" 0
 run imediff2 -u -o "$T" "$1" "$2"
 run cat "$T" > "$1"

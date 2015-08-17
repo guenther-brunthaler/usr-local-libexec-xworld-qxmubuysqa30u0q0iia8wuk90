@@ -22,7 +22,7 @@ t=
 OK=
 trap cleanup 0
 test x"$#" = x1
-t=`tempfile -p bzrci -s .msg`
+t=`mktemp --suffix=.msg "${TMPDIR:-/tmp}/bzrci.XXXXXXXXXX"`
 {
 	cat
 	sed -e '1,/^-----/ d' "$1"
@@ -43,7 +43,7 @@ l=`locale | sed -e 's,^LANG=,,; t; d'`
 cs=${l##*.}
 test -x"$cs" != x"$l" || cs=
 l=en_US.${cs:-utf8}
-t2=`tempfile -p bzrci -s .tmp`
+t2=`mktemp --suffix=.tmp "${TMPDIR:-/tmp}/bzrci.XXXXXXXXXX"`
 cat -- "$t" > "$t2"
 joe -language "$l" -rmargin 73 -wordwrap -- +3 "$t"
 cmp -- "$t" "$t2" > /dev/null && notext
