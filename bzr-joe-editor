@@ -8,7 +8,7 @@
 # $ sed -ie '/^\[DEFAULT]$/a editor = /usr/local/libexec/xworld/bzr-joe-editor' ~/.bazaar/bazaar.conf
 set -e
 cleanup() {
-	local rc=$?
+	rc=$?
 	test -n "$t" && rm -- "$t"
 	test -n "$t2" && rm -- "$t2"
 	test $rc = 0 || echo 'Failed!' >& 2
