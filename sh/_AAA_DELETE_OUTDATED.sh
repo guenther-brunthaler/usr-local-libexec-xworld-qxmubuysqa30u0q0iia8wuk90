@@ -15,7 +15,7 @@
 # its containing directory in order for both to stay on top of the file list
 # when sorted descending by date.
 #
-# Version 2020.336.2
+# Version 2020.336.3
 #
 # Copyright (c) 2017-2020 Guenther Brunthaler. All rights reserved.
 # 
@@ -58,7 +58,7 @@ test -n "$keep_days"
 cd "$dir"
 T=`mktemp -- "${TMPDIR:-/tmp}/${0##*/}.XXXXXXXXXX"`
 find . -type f -ctime +$keep_days ! -path ./"$script" | sed 's:^\./::' > "$T"
-find . -depth -type d -exec rmdir {} + 2> /dev/null || :
+find . -depth ! -path . -type d -exec rmdir {} + 2> /dev/null || :
 if test ! -s "$T"
 then
 	xmessage "No files are older than $keep_days days!"
