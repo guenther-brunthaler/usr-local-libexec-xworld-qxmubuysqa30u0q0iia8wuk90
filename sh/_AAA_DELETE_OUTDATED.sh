@@ -3,7 +3,7 @@
 # something like this:
 #
 # >#! /bin/sh
-# >. /usr/local/libexec/xworld/_AAA_DELETE_OUTDATED.sh
+# >. /usr/local/libexec/xworld/sh/_AAA_DELETE_OUTDATED.sh
 #
 # (obviously you might have to adjust the path.) Sourcing is necessary because
 # this script will "touch" the script sourcing it in order to remain at the
@@ -15,7 +15,7 @@
 # its containing directory in order for both to stay on top of the file list
 # when sorted descending by date.
 #
-# Version 2020.336.1
+# Version 2020.336.2
 #
 # Copyright (c) 2017-2020 Guenther Brunthaler. All rights reserved.
 # 
