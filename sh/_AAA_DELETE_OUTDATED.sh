@@ -1,21 +1,21 @@
 #! /bin/false
-# *Source* this file from another file with the same name, only containing the
+# *Source* this file from another file with the same name, only containing
 # something like this:
 #
 # >#! /bin/sh
 # >. /usr/local/libexec/xworld/sh/_AAA_DELETE_OUTDATED.sh
 #
-# (obviously you might have to adjust the path.) Sourcing is necessary because
+# (Obviously you might have to adjust the path.) Sourcing is necessary because
 # this script will "touch" the script sourcing it in order to remain at the
 # top of the directory listing when sorted by date.
 #
 # The script gets the number of days (to keep younger files than that) from
 # the script name, or from the basename of the directory otherwise. Also
-# delete all empty directories. Updates its own modification time and that of
+# deletes all empty directories. Updates its own modification time and that of
 # its containing directory in order for both to stay on top of the file list
 # when sorted descending by date.
 #
-# Version 2020.336.3
+# Version 2020.350
 #
 # Copyright (c) 2017-2020 Guenther Brunthaler. All rights reserved.
 # 
@@ -55,10 +55,14 @@ do
 done
 test -n "$keep_days"
 
+prune_dirs() {
+	find . -depth ! -path . -type d -exec rmdir -- {} + 2> /dev/null || :
+}
+
 cd "$dir"
 T=`mktemp -- "${TMPDIR:-/tmp}/${0##*/}.XXXXXXXXXX"`
 find . -type f -ctime +$keep_days ! -path ./"$script" | sed 's:^\./::' > "$T"
-find . -depth ! -path . -type d -exec rmdir {} + 2> /dev/null || :
+prune_dirs
 if test ! -s "$T"
 then
 	xmessage "No files are older than $keep_days days!"
@@ -75,5 +79,6 @@ then
 	do
 		rm -- "$f"
 	done < "$T"
+	prune_dirs
 	xmessage "The files have been deleted successfully!"
 fi
