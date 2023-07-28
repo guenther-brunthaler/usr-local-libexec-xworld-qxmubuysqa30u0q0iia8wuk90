@@ -1,0 +1,151 @@
+#! /bin/sh
+
+# Backups all files and directories below a specified $base directory to an
+# encrypted archive file $archive, but only if anything changed.
+#
+# Usage: Copy or symlink THIS script somewhere into the directory tree to be
+# backed up. It is allowed to rename the copy/link if desired; this will not
+# affect its functionality.
+#
+# Then create a configuration file with the same name plus ".conf" added. Copy
+# the defaults of the lines below between the BEGIN/END to the new
+# .conf file. Alternatively, run the script with the -i and -n options. This
+# will copy the lines for you, creating the new configuration file.
+#
+# Then edit the .conf file, removing all settings which need not to override a
+# default setting, and specifying new values for the remaining settings.
+#
+# The $base setting is especially important. If the script has been copied or
+# linked to a subdirectory of the tree to be backed up, $base can be set to a
+# relative path consisting only of ".." components to specifiy the root of the
+# tree to be backed up.
+#
+# The $base directory itself should always be specified relatively, where the
+# directory containing the copy or link to the script will be set by the
+# script to be the initial current directory when $base is evaluated.
+#
+# All other pathnames shall be relative to this $base directory.
+#
+# The script requires all of the specified files to exist. You can call the
+# script with the -i and -n options. It will then create any missing files as
+# empty files, but not perform a backup yet. After this, the script can be
+# called normally, because all required files will already exist.
+#
+# The script is also well suited to be run as a cron job. Just specify the
+# absolute path to the script as the cron job's command and add the -q option
+# to the script. This will avoid any outputs by the script unless an error
+# happens.
+#
+# Version 2023.209
+# Copyright (c) 2023 Guenther Brunthaler. All rights reserved.
+#
+# This script is free software.
+# Distribution is permitted under the terms of the GPLv3.
+
+# BEGIN OF DEFAULTS
+# Where to "chdir" to, starting in the directory where the script is located.
+# All remaining paths will be relative to $base.
+base=.
+archive=invalid/path/to/backup/archive/saved.tgz.gc2
+tar_comp=-z
+psw=invalid/path/to/password/file/secret.psw
+ck=checksum
+# END OF DEFAULTS
+
+set -e
+cleanup() {
+        rc=$?
+        test "$TD" && rm -r -- "$TD"
+        test $rc = 0 || echo "\"$0\" failed!" >& 2
+}
+TD=
+trap cleanup 0
+trap 'exit $?' INT QUIT TERM HUP
+
+verbose=false
+quiet=false
+dry_run=false
+initialize=false
+while getopts vqni opt
+do
+	case $opt in
+		v) verbose=true;;
+		q) quiet=true;;
+		n) dry_run=true;;
+		i) initialize=true;;
+		*) false || exit
+	esac
+done
+shift `expr $OPTIND - 1 || :`
+
+case $0 in
+	/*) me=$0;;
+	*) me=$PWD/$0; test -f "$me"
+esac
+startdir=`dirname -- "$me"`
+me=`basename -- "$me"`
+cd -- "$startdir"
+
+test -f "$me"
+config=./$me.conf
+if test ! -e "$config"
+then
+	$initialize
+	sed '/^# END/q' "$me" | sed '1,/^# BEGIN/d; $d' > "$config"
+	test -f "$config"
+	exit
+fi
+. ./"$config"
+test -d "$base"
+cd -- "$base"
+for f in "$archive" "$psw" "$ck"
+do
+	if test ! -e "$f"
+	then
+		$initialize
+		> "$f"
+	fi
+	test -f "$f"
+done
+
+xargsL() {
+	sed 's/./\\&/g' | xargs ${1+"$@"}
+}
+
+asciisort() {
+	LC_COLLATE=C LC_NUMERIC=C sort ${1+"$@"}
+}
+
+TD=`mktemp -d -- "${TMPDIR:-/tmp}/${0##*/}".XXXXXXXXXX`
+{
+	ck=./$ck
+	find . ! -path "$ck" -type l | asciisort | tee -- "$TD"/list
+	xargsL < "$TD"/list readlink --
+	find . ! -path "$ck" -type f | asciisort | tee -- "$TD"/list
+	xargsL < "$TD"/list cksum --
+} > "$TD"/ckinput 2> "$TD"/errors
+cat -- "$TD"/errors >& 2
+cat -- "$TD"/ckinput "$TD"/errors | cksum > "$TD"/ck
+if $verbose
+then
+	echo "OLD cksum: `cat -- "$ck"`"
+	echo "NEW cksum: `cat -- "$TD/"ck`"
+fi 
+
+if cmp -s -- "$ck" "$TD"/ck
+then
+	:
+else
+	case $dry_run in
+		false)
+			(
+				flock -w 60 5
+				cat -- "$TD"/ck > "$ck"
+				tar -c $tar_comp . \
+					| gbcrypt2 "$psw" > "$archive"
+			) 5>> "$ck"
+	esac
+	case $quiet in
+		false) ls -l -- "$archive"
+	esac
+fi
