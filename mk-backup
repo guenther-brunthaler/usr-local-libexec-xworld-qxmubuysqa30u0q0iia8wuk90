@@ -1,46 +1,108 @@
 #! /bin/sh
+exit_version() {
+	wr << ===; exit
+Version 2023.211
+Copyright (c) 2023 Guenther Brunthaler. All rights reserved.
 
-# Backups all files and directories below a specified $base directory to an
-# encrypted archive file $archive, but only if anything changed.
-#
-# Usage: Copy or symlink THIS script somewhere into the directory tree to be
-# backed up. It is allowed to rename the copy/link if desired; this will not
-# affect its functionality.
-#
-# Then create a configuration file with the same name plus ".conf" added. Copy
-# the defaults of the lines below between the BEGIN/END to the new
-# .conf file. Alternatively, run the script with the -i and -n options. This
-# will copy the lines for you, creating the new configuration file.
-#
-# Then edit the .conf file, removing all settings which need not to override a
-# default setting, and specifying new values for the remaining settings.
-#
-# The $base setting is especially important. If the script has been copied or
-# linked to a subdirectory of the tree to be backed up, $base can be set to a
-# relative path consisting only of ".." components to specifiy the root of the
-# tree to be backed up.
-#
-# The $base directory itself should always be specified relatively, where the
-# directory containing the copy or link to the script will be set by the
-# script to be the initial current directory when $base is evaluated.
-#
-# All other pathnames shall be relative to this $base directory.
-#
-# The script requires all of the specified files to exist. You can call the
-# script with the -i and -n options. It will then create any missing files as
-# empty files, but not perform a backup yet. After this, the script can be
-# called normally, because all required files will already exist.
-#
-# The script is also well suited to be run as a cron job. Just specify the
-# absolute path to the script as the cron job's command and add the -q option
-# to the script. This will avoid any outputs by the script unless an error
-# happens.
-#
-# Version 2023.209
-# Copyright (c) 2023 Guenther Brunthaler. All rights reserved.
-#
-# This script is free software.
-# Distribution is permitted under the terms of the GPLv3.
+This script is free software.
+Distribution is permitted under the terms of the GPLv3.
+===
+}
+
+exit_help() {
+	wr << ===; echo; exit_version
+$APP - create encrypted backups of directory trees on volatile storage
+
+Usage: $APP [ <options> ... [--] ]
+
+$APP backups all files and directories below a specified \$base directory to an
+ encrypted archive file \$archive, but only if anything changed.
+
+Preparing a backup: Copy or symlink THIS script to somewhere within the
+ directory tree to be backed up. It is allowed to rename the copy/link if
+ desired; this will not affect its functionality.
+
+Then invoke the script at its new location with the -i option. This will
+ create a template configuration file with the same name as the script plus
+ ".conf" added. All values in the template file will have been set to their
+ default settings.
+
+Now edit the .conf file and remove all settings for which the shown default
+ values are fine. Replace the remaining default values with different values
+ which shall actually be used. Note that some of the settings have no
+ reasonable defaults and need always be set in the configuration file.
+
+The configuration file is a shell script which will be sourced by $APP. As
+ such, certain features like backquote substitutions or arithmetic expansion
+ are available in the configuration file and can be used. It is also allowed
+ to define additional variables, e.g. for storing temporary results of
+ calculations. The only variables which matter are the ones already present
+ when the template configuration file was generated. Only their values are
+ important and will be extracted from the configuration file script when
+ execution reaches its end with a non-error result code (variable \$?).
+
+Otherwise, the configuration file will be rejected and $APP will refuse to
+run.
+
+The \$base setting is especially important. If the script has been copied or
+ linked to a subdirectory of the tree to be backed up, \$base can be set to a
+ relative path consisting only of ".." components to specifiy the root of the
+ tree to be backed up.
+
+The \$base directory itself should always be specified relatively, where the
+ directory containing the copy or link to the script will be set by the script
+ to be the initial current directory when \$base is evaluated.
+
+All other pathnames shall be relative to this \$base directory.
+
+The script requires all of the specified files to exist. You can call the
+ script with the -i option. It will then create any missing files as empty
+ files, but not perform a backup yet. After this, the script can be called
+ normally, because all required files will already exist.
+
+The script is also well suited to be run as a cron job. Just specify the
+ absolute path to the script as the cron job's command and add the -q option
+ to the script. This will avoid any outputs by the script unless an error
+ happens.
+
+If you want to stop a cron job from making backups at unpredictable instances
+ in time, use the -d option to temporarily disable backups. The script will
+ then no longer make backups no matter how often and when it is invoked. This
+ might be useful before shutting down the system, in order to avoid that a
+ cron job is interrupted while while making a backup. Option -e re-enables
+ backups.
+
+To be more precise, -d creates a tag file which is checked for existence and
+ suppresses backups, while -e removes the tag file. Do not try to create or
+ remove the tag file manually, because locks need to be held for those
+ operations to be safe against race conditions.
+
+Supported options:
+
+-d: Disable backups. Creates a tag file $APP will check for and suppresses
+ backups as long as it exists. Don't create the tag file manually. Proper file
+ locking protocols need to be followed in order for the tag file creation and
+ removal to be safe against race conditions.
+-e: Re-enable backups. Removes the backup-suppression tag file if it exists.
+ Don't do this manually. See documentation of option -d for the reason.
+-v: Enable display or verbose diagnostic messages.
+-q: Suppress all normal output except for error and severe warning messages.
+-n: Check everything, but don't actually make any backups.
+-i: Initialize the backup system. Implies -n. If no configuration file exists,
+ create a template configuration file and exit. If a configuration file does
+ exist, check for other required files and create them as empty files (with
+ umask 077) so that the script won't refuse to run. Note that the file
+ locations will be read from the configuration file, so make sure to edit the
+ template configuration file first before letting -i create the files
+ mentioned in it. Note that -i will not create any directories; just the
+ files. The directories must already exist.
+Initialize a template configuration file and create remaining missing files
+ as empty files.
+-h: show this help and exit
+-V: show version information and exit
+===
+}
+APP=${0##*/}
 
 # BEGIN OF DEFAULTS
 # Where to "chdir" to, starting in the directory where the script is located.
@@ -50,6 +112,7 @@ archive=invalid/path/to/backup/archive/saved.tgz.gc2
 tar_comp=-z
 psw=invalid/path/to/password/file/secret.psw
 ck=checksum
+pausing_tagfile=BACKUPS_ARE_CURRENTLY_DISABLED.tag
 # END OF DEFAULTS
 
 set -e
@@ -62,17 +125,38 @@ TD=
 trap cleanup 0
 trap 'exit $?' INT QUIT TERM HUP
 
+wr() {
+	{
+		unterminated=false
+		while IFS= read -r line
+		do
+			test "${line%" "}" = "$line"
+			test "${line#" "}" != "$line" && unterminated=false
+			$unterminated && echo
+			printf '%s' "$line"
+			unterminated=true
+		done
+		$unterminated && echo
+	} | fold -sw $LINEWIDTH
+}
+LINEWIDTH=`tput cols || echo ${COLUMNS:-66}`
+
 verbose=false
 quiet=false
 dry_run=false
 initialize=false
-while getopts vqni opt
+able=
+while getopts edvqnihV opt
 do
 	case $opt in
+		e) able=en-;;
+		d) able=dis-;;
 		v) verbose=true;;
 		q) quiet=true;;
 		n) dry_run=true;;
-		i) initialize=true;;
+		i) initialize=true; dry_run=true;;
+		h) exit_help;;
+		V) exit_version;;
 		*) false || exit
 	esac
 done
@@ -86,6 +170,7 @@ startdir=`dirname -- "$me"`
 me=`basename -- "$me"`
 cd -- "$startdir"
 
+umask 077
 test -f "$me"
 config=./$me.conf
 if test ! -e "$config"
@@ -108,6 +193,50 @@ do
 	test -f "$f"
 done
 
+TD=`mktemp -d -- "${TMPDIR:-/tmp}/${0##*/}".XXXXXXXXXX`
+(
+	flock -w 60 5
+	case $able in
+		dis-)
+			if test -e "$pausing_tagfile"
+			then
+				> "$TD/$pausing_tagfile"
+				{
+					echo "No need to disable backups!"
+					echo "They are already disabled."
+				} >& 2
+			else
+				case $quiet in
+					false) echo "Disabling backups."
+				esac
+				> "$pausing_tagfile"; > "$TD/$pausing_tagfile"
+			fi
+			;;
+		en-)
+			if test -e "$pausing_tagfile"
+			then
+				case $quiet in
+					false) echo "Resuming backups."
+				esac
+				rm -- "$pausing_tagfile"
+			else
+				{
+					echo "No need to resume backups!"
+					echo "They are still enabled."
+				} >& 2
+			fi
+			;;
+		*) test ! -e "$pausing_tagfile" || > "$TD/$pausing_tagfile"
+	esac
+) 5< "$ck"
+if test -e "$TD/$pausing_tagfile"
+then
+	case $quiet in
+		false) echo "Backups are currently disabled - skipping backup."
+	esac
+	exit
+fi
+
 xargsL() {
 	sed 's/./\\&/g' | xargs ${1+"$@"}
 }
@@ -116,15 +245,27 @@ asciisort() {
 	LC_COLLATE=C LC_NUMERIC=C sort ${1+"$@"}
 }
 
-TD=`mktemp -d -- "${TMPDIR:-/tmp}/${0##*/}".XXXXXXXXXX`
 {
-	ck=./$ck
-	find . ! -path "$ck" -type l | asciisort | tee -- "$TD"/list
-	xargsL < "$TD"/list readlink --
-	find . ! -path "$ck" -type f | asciisort | tee -- "$TD"/list
-	xargsL < "$TD"/list cksum --
+	for phase in l f
+	do
+		case $phase in
+			l) utility=readlink;;
+			f) utility=cksum;;
+			*) false || exit
+		esac
+		find . \
+			! -path ./"$ck" \
+			! -path ./"$pausing_tagfile" \
+			-type $phase \
+		| asciisort | tee -- "$TD"/list
+		xargsL < "$TD"/list $utility --
+	done
 } > "$TD"/ckinput 2> "$TD"/errors
 cat -- "$TD"/errors >& 2
+case $- in
+	*v*) > "$TD"/errors;;
+	*x*) sed -i '/^+ /d' "$TD"/errors
+esac
 cat -- "$TD"/ckinput "$TD"/errors | cksum > "$TD"/ck
 if $verbose
 then
