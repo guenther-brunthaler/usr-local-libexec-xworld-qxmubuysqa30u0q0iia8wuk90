@@ -1,7 +1,7 @@
 #! /bin/sh
 exit_version() {
 	wr << ===; exit
-Version 2023.212
+Version 2023.212.1
 Copyright (c) 2023 Guenther Brunthaler. All rights reserved.
 
 This script is free software.
@@ -228,7 +228,7 @@ TD=`mktemp -d -- "${TMPDIR:-/tmp}/${0##*/}".XXXXXXXXXX`
 		dis-)
 			if test -e "$pausing_tagfile"
 			then
-				> "$TD/$pausing_tagfile"
+				> "$TD"/pausing_tagfile
 				{
 					echo "No need to disable backups!"
 					echo "They are already disabled."
@@ -237,7 +237,7 @@ TD=`mktemp -d -- "${TMPDIR:-/tmp}/${0##*/}".XXXXXXXXXX`
 				case $quiet in
 					false) echo "Disabling backups."
 				esac
-				> "$pausing_tagfile"; > "$TD/$pausing_tagfile"
+				> "$pausing_tagfile"; > "$TD"/pausing_tagfile
 			fi
 			;;
 		en-)
@@ -254,10 +254,10 @@ TD=`mktemp -d -- "${TMPDIR:-/tmp}/${0##*/}".XXXXXXXXXX`
 				} >& 2
 			fi
 			;;
-		*) test ! -e "$pausing_tagfile" || > "$TD/$pausing_tagfile"
+		*) test ! -e "$pausing_tagfile" || > "$TD"/pausing_tagfile
 	esac
 ) 5< "$ck"
-if test -e "$TD/$pausing_tagfile"
+if test -e "$TD"/pausing_tagfile
 then
 	case $quiet in
 		false) echo "Backups are currently disabled - skipping backup."
