@@ -139,6 +139,7 @@ wr() {
 		$unterminated && echo
 	} | fold -sw $LINEWIDTH
 }
+test "$TERM" || export TERM=dumb
 LINEWIDTH=`tput cols || echo ${COLUMNS:-66}`
 
 verbose=false
