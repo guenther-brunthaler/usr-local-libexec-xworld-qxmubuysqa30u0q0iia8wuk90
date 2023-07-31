@@ -1,7 +1,7 @@
 #! /bin/sh
 exit_version() {
 	wr << ===; exit
-Version 2023.212.1
+Version 2023.212.2
 Copyright (c) 2023 Guenther Brunthaler. All rights reserved.
 
 This script is free software.
@@ -96,6 +96,13 @@ Supported options:
  template configuration file first before letting -i create the files
  mentioned in it. Note that -i will not create any directories; just the
  files. The directories must already exist.
+-D: Show the current defaults. This are the same contents that option -i would
+ write into the template configuration file if no configuration file existed
+ yet. This option allows to determine the default settings after a
+ configuration file has already been created, and the user has already removed
+ that setting from the file because the defaults were fine at that time.
+ However this might change later, so the user might still be interested to
+ learn the default value for overring it with a better one.
 Initialize a template configuration file and create remaining missing files
  as empty files.
 -h: show this help and exit
@@ -147,9 +154,11 @@ quiet=false
 dry_run=false
 initialize=false
 able=
-while getopts edvqnihV opt
+show_defaults=false
+while getopts DedvqnihV opt
 do
 	case $opt in
+		D) show_defaults=true;;
 		e) able=en-;;
 		d) able=dis-;;
 		v) verbose=true;;
@@ -201,10 +210,18 @@ cd -- "$startdir"
 umask 077
 test -f "$me"
 config=./$me.conf
-if test ! -e "$config"
+
+get_defaults() {
+	sed '/^# END/q' "$me" | sed '1,/^# BEGIN/d; $d'
+}
+if $show_defaults
+then
+	get_defaults
+	exit
+elif test ! -e "$config"
 then
 	$initialize
-	sed '/^# END/q' "$me" | sed '1,/^# BEGIN/d; $d' > "$config"
+	get_defaults > "$config"
 	test -f "$config"
 	exit
 fi
