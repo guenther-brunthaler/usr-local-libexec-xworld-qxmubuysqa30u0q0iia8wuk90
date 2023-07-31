@@ -1,7 +1,7 @@
 #! /bin/sh
 exit_version() {
 	wr << ===; exit
-Version 2023.211
+Version 2023.212
 Copyright (c) 2023 Guenther Brunthaler. All rights reserved.
 
 This script is free software.
@@ -161,6 +161,33 @@ do
 	esac
 done
 shift `expr $OPTIND - 1 || :`
+
+all=true
+while read url need
+do
+	command -v $need > /dev/null 2>& 1 || {
+		prj=${url##*:}; prj=${prj%.*}
+		sed 's/^[[:space:]]*| \{0,1\}//' << :: | wr >& 2
+			|
+			| Required utility '$need' is missing!
+			|
+			| It can be found in a git repository with the abstract
+			|  URL '$url'.
+			|
+			| Most likely, one of the currently most popular git
+			|  hosting websites will have a copy of it using the
+			|  project name '$prj'.
+::
+		all=false
+	}
+done << ===
+	tag:xworld.mine.nu,2009:someplace-simplistic--encryption-`:
+		`n1nsy1feajq6x0dfr2zn1bi6l.git gbcrypt2
+	tag:xworld.mine.nu,2009:usr-local-bin-xworld-`:
+			`jv3gwuidf2ezyr5vbqavqtxyh.git`:
+		` keygen-octets-by-harvesting-entropy
+===
+$all || exit
 
 case $0 in
 	/*) me=$0;;
