@@ -15,9 +15,8 @@
 # its containing directory in order for both to stay on top of the file list
 # when sorted descending by date.
 #
-# Version 2020.350
-#
-# Copyright (c) 2017-2020 Guenther Brunthaler. All rights reserved.
+# Version 2023.249
+# Copyright (c) 2017-2023 Guenther Brunthaler. All rights reserved.
 # 
 # This script is free software.
 # Distribution is permitted under the terms of the GPLv3.
@@ -43,9 +42,9 @@ dname=`readlink -f -- "$dir"`; dname=`basename -- "$dname"`
 keep_days=
 for name in "$script" "$dname"
 do
-	for pat in '[Dd]\(ays\)\{0,1\}' '[Tt]\(age\)\{0,1\}'
+	for pat in '[Dd]\(ays\)\{0,1\}' '[Tt]\(agen\)\{0,1\}'
 	do
-		pat='.*[^0-9]\([0-9]\{1,\}\)[^[:alnum:]]*'$pat'[^[:alnum:]]*$'
+		pat='.*[^0-9]\([0-9]\{1,\}\)[^[:alnum:]]*'$pat'[^[:alnum:]]'
 		if pat=`expr x"$name" : x"$pat"`
 		then
 			keep_days=$pat
