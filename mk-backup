@@ -1,8 +1,8 @@
 #! /bin/sh
 exit_version() {
 	wr << ===; exit
-Version 2023.212.2
-Copyright (c) 2023 Guenther Brunthaler. All rights reserved.
+Version 2024.168
+Copyright (c) 2023-2024 Guenther Brunthaler. All rights reserved.
 
 This script is free software.
 Distribution is permitted under the terms of the GPLv3.
@@ -102,7 +102,7 @@ Supported options:
  configuration file has already been created, and the user has already removed
  that setting from the file because the defaults were fine at that time.
  However this might change later, so the user might still be interested to
- learn the default value for overring it with a better one.
+ learn the default value for overriding it with a better one.
 Initialize a template configuration file and create remaining missing files
  as empty files.
 -h: show this help and exit
